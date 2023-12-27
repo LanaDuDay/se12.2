@@ -7,6 +7,8 @@ app = Flask(__name__)
 @app.route('/start_auto_trade', methods=['POST'])
 def start_auto_trade():
     try:
+        data = request.form
+        print(data)
         # Retrieve historical price data
         historical_data = get_historical_data()
 
@@ -16,27 +18,9 @@ def start_auto_trade():
         # Get current price
         price = get_current_price()
 
-        print(is_below_mean(price, mean, stdev, mean_reversion_threshold))
-        print(is_above_mean(price, mean, stdev, mean_reversion_threshold))
-        
         # Check if price is below mean by threshold
         if is_below_mean(price, mean, stdev, mean_reversion_threshold):
             # Place buy order
-            account_info = client.get_account(recvWindow=50000)
-            balances = account_info['balances']
-
-            # Print the quantity of each coin
-            for balance in balances:
-                asset = balance['asset']
-                free = float(balance['free'])
-                locked = float(balance['locked'])
-                total = free + locked
-
-                # Print the amount of BTC, MLN, ETH, USDT
-                if asset in ['BTC', 'MLN', 'ETH', 'USDT'] and total > 0:
-                    print(f"{asset}: {total}")
-
-            print(f"Placing buy order at {price:.2f}")
             order = client.create_order(
                 symbol=symbol,
                 side=Client.SIDE_BUY,
@@ -74,6 +58,7 @@ def start_auto_trade():
                 stopPrice=round(stop_loss_price * 0.98,2),  # Giá stop-loss
                 recvWindow=50000,
             )
+            print(order)
 
             print(f"Stop loss order placed at {stop_loss_price}")
 
@@ -85,12 +70,13 @@ def start_auto_trade():
             
             order = client.create_order(
                 symbol=symbol,
-                side=Client.SIDE_SELL,
+                side=Client.SIDE_BUY,
                 type=Client.ORDER_TYPE_MARKET,
                 quantity=quantity,
                 recvWindow=50000  # Đặt giá trị recvWindow là 5000 mili giây (5 giây), ví dụ.
             )
             print(order)
+            
 
             # Wait for order to fill
             while True:
@@ -107,34 +93,25 @@ def start_auto_trade():
                     print("Waiting for order to fill...")
                     time.sleep(1)
 
-            stop_loss_price = round(float(order_status["cummulativeQuoteQty"]) * (1 + stop_loss_threshold), 2)
-           # Lấy thông tin chi tiết về cặp giao dịch
-            symbol_info = client.get_symbol_info(symbol)
-            price_filter = next((f for f in symbol_info['filters'] if f['filterType'] == 'PRICE_FILTER'), None)
-
-            # Lấy bước giá tối thiểu
-            min_price = float(price_filter['minPrice'])
             # Tính toán giá bán mới
-            new_sell_price = round(stop_loss_price * 0.95, int(-math.log10(min_price)))
-
-            # Tạo đơn đặt hàng với giá mới
-            stop_loss_order = client.create_oco_order(
+            stop_loss_price = round(float(price) * (1 + stop_loss_threshold), 2)
+            
+            order = client.create_order(
                 symbol=symbol,
-                quantity=quantity,
-                side=binance.enums.SIDE_SELL,
-                stopLimitTimeInForce=binance.enums.TIME_IN_FORCE_GTC,
-                stopLimitPrice=stop_loss_price,
-                stopPrice=stop_loss_price * 0.98,
-                price=new_sell_price,
-                type=binance.enums.ORDER_TYPE_STOP_LOSS_LIMIT,
-                recvWindow=50000
+                side='SELL',  # Đặt lệnh bán để thiết lập stop-loss
+                type='STOP_LOSS_LIMIT',
+                timeInForce='GTC',  # Good 'til Cancel
+                quantity=0.001,  # Số lượng cần bán
+                price=stop_loss_price,  # Giá stop-loss
+                stopPrice=round(stop_loss_price * 0.98,2),  # Giá stop-loss
+                recvWindow=50000,
             )
+            print(order)
 
-            print(f"Stop loss order placed at {new_sell_price}")
+            print(f"Stop loss order placed at {stop_loss_price}")
         else:
             print("Không thực hiện mua bán trong interval này")
-        # Wait for the next interval
-        time.sleep(3600)
+        return jsonify({'status': 'success', 'order': order, 'message': 'Trade executed successfully'})
 
     except binance.exceptions.BinanceAPIException as e:
         if e.code == -1021:
@@ -182,8 +159,32 @@ def get_prices():
 
     return jsonify({"PriceCoin": prices})
 
+@app.route('/trade_history', methods=['POST'])
+def trade_history():
+    try:
+        # Lấy dữ liệu từ request JSON
+        symbol = request.form.get('symbol', 'BTCUSDT')
+        trades = client.get_my_trades(symbol=symbol)
+
+        # Chuẩn bị dữ liệu để in ra
+        history_data = []
+        for trade in trades:
+            history_data.append({
+                'symbol': trade['symbol'],
+                'orderId': trade['orderId'],
+                'price': float(trade['price']),
+                'quantity': float(trade['qty']),
+                'commission': float(trade['commission']),
+                'time': trade['time'],
+                'isBuyer': trade['isBuyer']
+            })
+
+        return jsonify({'status': 'success', 'trade_history': history_data})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error fetching trade history: {str(e)}'})
+
 
 if __name__ == '__main__':
-    app.run(host = "0.0.0.0")
+    app.run(host = "0.0.0.0", debug=True)
 # Main loop
 
