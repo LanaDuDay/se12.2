@@ -1,7 +1,7 @@
 from binance.client import Client
 
-api_key = 'your_api_key'
-api_secret = 'your_api_secret'
+api_key = 'P3nlErUCDYzxboVzFPdAGUkN9VavD7Mq41TqOguuXAXtQGParQidTGyTH1Oh7xWW'
+api_secret = 'A3FkAcHXGDwzDlAefSZZC6eIxBexy6AaCE9HM5ke4aNR8f2CmFfMfXZkYWDKtncr'
 
 client = Client(api_key, api_secret)
 
