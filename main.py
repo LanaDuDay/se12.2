@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from config import *
 from functions import *
+
 import math
 
 app = Flask(__name__)
@@ -70,7 +71,7 @@ def start_auto_trade():
             
             order = client.create_order(
                 symbol=symbol,
-                side=Client.SIDE_BUY,
+                side=Client.SIDE_SELL,
                 type=Client.ORDER_TYPE_MARKET,
                 quantity=quantity,
                 recvWindow=50000  # Đặt giá trị recvWindow là 5000 mili giây (5 giây), ví dụ.
@@ -183,6 +184,132 @@ def trade_history():
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error fetching trade history: {str(e)}'})
 
+@app.route('/place_order', methods=['POST'])
+def place_order():
+    try:
+        # Nhận dữ liệu từ Android
+        data = request.form
+        print(data)
+        symbol = data.get('symbol')
+        quantity = float(data.get('quantity'))
+        price = float(data.get('price'))
+        print(data)
+
+        # Thực hiện order Buy
+        order_result = place_buy_order(symbol, quantity, price)
+        print(order_result);
+        return jsonify({"result": order_result})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Hàm thực hiện order Buy
+def place_buy_order(symbol, quantity, price):
+    try:
+        order = client.create_order(
+            symbol=symbol,
+            side=Client.SIDE_BUY,
+            type=Client.ORDER_TYPE_LIMIT,
+            timeInForce=Client.TIME_IN_FORCE_GTC,
+            quantity=quantity,
+            price=price
+        )
+        return order
+    except Exception as e:
+        return str(e)
+
+
+    
+@app.route('/open_orders_json', methods=['POST'])
+def open_orders_json():
+    # Lấy danh sách tất cả các symbols
+    data = request.form
+    print(data)
+    exchange_info = client.get_exchange_info()
+    symbols = [symbol_info['symbol'] for symbol_info in exchange_info['symbols']]
+
+    # Lấy danh sách các lệnh giới hạn đang chờ khớp cho mỗi symbol
+    open_orders_by_symbol = {}
+    for symbol in symbols:
+        open_orders = client.get_open_orders(symbol=symbol)
+        if open_orders:
+            open_orders_by_symbol[symbol] = open_orders
+    print(open_orders_by_symbol)
+    print("xin chao")
+    # Trả về dữ liệu JSON
+    return jsonify(open_orders_by_symbol)
+
+@app.route('/buy_market', methods=['POST'])
+def buy_market():
+    data = request.form
+    symbol = data.get('symbol')
+    quantity = float(data.get('quantity'))
+
+    try:
+        order = client.create_order(
+                symbol=symbol,
+                side=Client.SIDE_BUY,
+                type=Client.ORDER_TYPE_MARKET,
+                quantity=quantity,
+                recvWindow=50000  # Đặt giá trị recvWindow là 5000 mili giây (5 giây), ví dụ.
+            )
+        return jsonify(order)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+def place_sell_order(symbol,quantity,price):
+    try:
+        order = client.create_order(
+            symbol=symbol,
+            side=Client.SIDE_SELL,
+            type=Client.ORDER_TYPE_LIMIT,
+            timeInForce=Client.TIME_IN_FORCE_GTC,
+            quantity=quantity,
+            price=price
+        )
+        return order
+    except Exception as e:
+        return str(e)
+
+# Route cho gửi đơn giới hạn
+@app.route('/send_limit', methods=['POST'])
+def send_limit():
+    try:
+        # Nhận dữ liệu từ Android
+        data = request.form
+        print(data)
+        symbol = data.get('symbol')
+        quantity = float(data.get('quantity'))
+        price = float(data.get('price'))
+        print(data)
+
+        # Thực hiện order Buy
+        order_result = place_sell_order(symbol, quantity, price)
+        print(order_result);
+        return jsonify({"result": order_result})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# Route cho gửi đơn thị trường
+@app.route('/send_market', methods=['POST'])
+def send_market():
+    data = request.form
+    symbol = data.get('symbol')
+    quantity = float(data.get('quantity'))
+
+    try:
+        order = client.create_order(
+                symbol=symbol,
+                side=Client.SIDE_SELL,
+                type=Client.ORDER_TYPE_MARKET,
+                quantity=quantity,
+                recvWindow=50000  # Đặt giá trị recvWindow là 5000 mili giây (5 giây), ví dụ.
+            )
+        return jsonify(order)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     app.run(host = "0.0.0.0", debug=True)
