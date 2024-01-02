@@ -257,22 +257,19 @@ def place_buy_order(symbol, quantity, price):
     
 @app.route('/open_orders_json', methods=['POST'])
 def open_orders_json():
-    # Lấy danh sách tất cả các symbols
-    data = request.form
-    print(data)
-    exchange_info = client.get_exchange_info()
-    symbols = [symbol_info['symbol'] for symbol_info in exchange_info['symbols']]
+    # Danh sách 10 symbols cần lấy
+    selected_symbols = ['BTCUSDT', 'BNBUSDT', 'ETHUSDT', 'ADAUSDT', 'XRPUSDT', 'SOLUSDT', 'DOTUSDT', 'DOGEUSDT', 'AVAXUSDT', 'LUNAUSDT']
 
     # Lấy danh sách các lệnh giới hạn đang chờ khớp cho mỗi symbol
     open_orders_by_symbol = {}
-    for symbol in symbols:
+    for symbol in selected_symbols:
         open_orders = client.get_open_orders(symbol=symbol)
         if open_orders:
             open_orders_by_symbol[symbol] = open_orders
-    print(open_orders_by_symbol)
-    print("xin chao")
+
     # Trả về dữ liệu JSON
     return jsonify(open_orders_by_symbol)
+
 
 @app.route('/buy_market', methods=['POST'])
 def buy_market():
@@ -407,96 +404,6 @@ def order_book():
 
     return jsonify(order_book_json)
 
-def getHourlyData(symbol, num_hours=200):
-    # Calculate the number of data points needed for the last num_hours
-    num_points = num_hours
-
-    frame = pd.DataFrame(client.get_historical_klines(symbol, '1h', num_points))
-
-    frame = frame[[0, 4, 7]]
-    frame.columns = ['ThoiGian', 'GiaDong', 'KhoiLuong']
-
-    frame['GiaDong'] = frame['GiaDong'].astype(float)
-    frame['KhoiLuong'] = frame['KhoiLuong'].astype(float)
-
-    frame['ThoiGian'] = pd.to_datetime(frame['ThoiGian'], unit='ms')
-    return frame
-
-#ok
-def SMA(df):
-    df['SMA7(7h)'] = df['GiaDong'].rolling(7).mean()
-    df['SMA25(25h)'] = df['GiaDong'].rolling(25).mean()
-    df['SMA99(99h)'] = df['GiaDong'].rolling(99).mean()
-
-#ok 
-def EMA(df):
-    df['EMA7'] = df['GiaDong'].ewm(span=7, adjust=False).mean()
-    df['EMA25'] = df['GiaDong'].ewm(span=25, adjust=False).mean()
-    df['EMA99'] = df['GiaDong'].ewm(span=99, adjust=False).mean()
-
-
-#ok
-def strategy(data):
-    current_price = get_current_price()
-    Buy_Signal = (current_price > data['SMA7(7h)']) & (current_price > data['SMA25(25h)']) & (current_price > data['SMA99(99h)']) (current_price > data['EMA7(7h)']) & (current_price > data['EMA25(25h)']) & (current_price > data['EMA99(99h)'])
-    Sell_Signal = (current_price < data['SMA25(25h)']) | (current_price < data['SMA99(99h)']) & (current_price < data['EMA25(25h)']) | (current_price < data['EMA99(99h)'])
-    if Buy_Signal: return True
-    if Sell_Signal: return False
-    return None
-#ok
-def log_transaction(action, symbol, quantity, price, file_path='note.txt'):
-    # Mở file ở chế độ append ('a')
-    with open(file_path, 'a') as file:
-        # Ghi thông tin giao dịch vào file
-        file.write(f"{action} - Symbol: {symbol}, Quantity: {quantity}, Price: {price}\n")
-
-#Ok        
-def create_note_file(file_path='note.txt'):
-    # Mở file ở chế độ ghi ('w'), nếu file chưa tồn tại sẽ tạo mới, nếu đã tồn tại sẽ bị ghi đè
-    with open(file_path, 'w') as file:
-        file.write("My Trading Notes\n")  # Ghi một dòng tiêu đề vào file
-        file.write("================\n")  # Ghi một dòng phân đoạn
-
-#ok        
-def get_account_balance(symbol='BTC'):
-    # Lấy thông tin tài khoản
-    account_info = client.get_account()
-
-    # Duyệt qua các tài khoản và lấy số dư của đồng coin cụ thể
-    for balance in account_info['balances']:
-        if balance['asset'] == symbol:
-            return float(balance['free'])
-
-    # Trả về 0 nếu không tìm thấy số dư cho đồng coin cụ thể
-    return 0.0
-
-@app.route('/trading_data', methods=['POST'])
-def process_trading_data():
-    # Get the data sent in the POST request
-    request_data = request.form
-    print(request_data)
-    # Extract relevant parameters from the request_data
-    symbol = request_data.get('symbol', 'BTCUSDT')
-    num_hours = 200
-
-    # Fetch trading data using the provided parameters
-    dataLive = getHourlyData(symbol, num_hours=num_hours)
-    EMA(dataLive)
-    SMA(dataLive)
-    
-    if (strategy(dataLive) == True) and (get_account_balance(symbol='USDT') != 0):
-        place_buy_order(symbol, get_account_balance(symbol='BTC'), get_current_price())
-        log_transaction('BUY', symbol, get_account_balance(symbol='BTC'), get_current_price(), file_path='Dữ liệu giao dịch.txt')
-    elif (strategy(dataLive) == False) and (get_account_balance(symbol='BTCUSDT') != 0):
-        place_sell_order(symbol, get_account_balance(symbol='BTC'), get_current_price())
-        log_transaction('SELL', symbol, get_account_balance(symbol='BTC'), get_current_price(), file_path='Dữ liệu giao dịch.txt')
-    else:
-        log_transaction('HOLD', symbol, 0, get_current_price(), file_path='Dữ liệu giao dịch.txt')
-
-    # Convert the DataFrame to a JSON object
-    json_data = dataLive.to_json(orient='records', date_format='iso')
-
-    return jsonify(json_data)
 
 if __name__ == '__main__':
     app.run(host = "0.0.0.0", debug=True)
