@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity2">
+
+    <TextView
+        android:id="@+id/textViewTitle"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:text="TRANSACTIONS"
+        android:textSize="25sp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:background="@drawable/welcome"
+        android:gravity="center"
+        android:textColor="@android:color/white"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView1"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="0dp"
+        android:background="@drawable/welcome"
+        app:layout_constraintTop_toBottomOf="@+id/textViewTitle"
+        app:layout_constraintBottom_toTopOf="@+id/linearLayoutButtons"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        />
+
+    <LinearLayout
+        android:id="@+id/linearLayoutButtons"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:background="@drawable/welcome"
+        app:layout_constraintTop_toBottomOf="@id/recyclerView1">
+
+        <!-- ImageView cho Button 1 -->
+        <ImageView
+            android:id="@+id/imageViewButton1"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="10dp"
+            android:layout_weight="1"
+            android:src="@drawable/img_2"
+            android:clickable="true"
+            android:onClick="onButton1Click"
+            android:background="@drawable/welcome"
+            android:contentDescription="Button 1"
+            android:alpha="0.5"/>
+
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="1dp" />
+
+        <!-- ImageView cho Button 2 -->
+        <ImageView
+            android:id="@+id/imageViewButton2"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="10dp"
+            android:layout_weight="1"
+            android:src="@drawable/img_1"
+            android:clickable="true"
+            android:onClick="onButton2Click"
+            android:background="@drawable/welcome"
+            android:contentDescription="Button 2"
+            android:alpha="0.5"/>
+
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="1dp" />
+
+        <!-- ImageView cho Button 3 -->
+        <ImageView
+            android:id="@+id/imageViewButton3"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginTop="10dp"
+            android:src="@drawable/img_3"
+            android:clickable="true"
+            android:onClick="onButton3Click"
+            android:background="@drawable/welcome"
+            android:contentDescription="Button 3"
+            />
+
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="1dp" />
+
+        <!-- ImageView cho Button 4 -->
+        <ImageView
+            android:id="@+id/imageViewButton4"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginTop="10dp"
+            android:src="@drawable/img_4"
+            android:clickable="true"
+            android:onClick="onButton4Click"
+            android:background="@drawable/welcome"
+            android:contentDescription="Button 4"
+            android:alpha="0.5"
+            />
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
