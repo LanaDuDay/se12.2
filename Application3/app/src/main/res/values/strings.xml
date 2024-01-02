@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Application#3</string>
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="log_out">Log out</string>
+    <string name="new_user_register">New user? Register</string>
+    <string name="login_to_new_account">Login to new account</string>
+    <string name="phone_84">Phone (+84)</string>
+    <string name="date_of_birth_dd_mm_yyyy">Date of birth (dd/mm/yyyy)</string>
+    <string name="full_name">Full-name</string>
+    <string name="email_required">Email (Required)</string>
+    <string name="password_required">Password (Required)</string>
+    <string name="create_new_account">Create New Account</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="user_update">User Update</string>
+    <string name="update_profile">Update Profile</string>
+
+</resources>
