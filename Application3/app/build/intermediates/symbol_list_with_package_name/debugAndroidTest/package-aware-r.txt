@@ -1,3 +1,0 @@
-com.example.application3.test
-style WhiteBackgroundDialogTheme
-style WhiteBackgroundTheme
