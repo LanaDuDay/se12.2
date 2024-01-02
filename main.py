@@ -1,6 +1,17 @@
 from flask import Flask, jsonify, request
 from config import *
 from functions import *
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+from binance.client import Client
+from datetime import datetime, timedelta
+from sklearn.impute import SimpleImputer
+from scipy.interpolate import lagrange
+from io import BytesIO, StringIO
+import base64
 
 import math
 
@@ -135,17 +146,41 @@ def get_account_info():
         # Ví dụ trả về một JSON đơn giản
         account_info = client.get_account(recvWindow=50000)
         balances = account_info['balances']
+
+        # Danh sách cặp giao dịch bạn quan tâm
+        target_assets = ['BTC', 'BNB', 'ETH', 'ADAU', 'XRP', 'SOLU', 'DOT', 'DOGE', 'AVAX', 'LUNA']
+
+        # Tạo một danh sách để lưu thông tin về các cặp giao dịch
+        result = []
+
         for balance in balances:
             asset = balance['asset']
-            free = float(balance['free'])
-            locked = float(balance['locked'])
-            total = free + locked
+            
+            # Kiểm tra xem asset có trong danh sách quan tâm không
+            if asset in target_assets:
+                free = float(balance['free'])
+                locked = float(balance['locked'])
+                
+                # Tạo symbol từ asset
+                symbol = asset + 'USDT'
+                
+                # Lấy thông tin giá của cặp giao dịch
+                ticker = client.get_ticker(symbol=symbol)
+                price = float(ticker['lastPrice'])
+                
+                # Tạo đối tượng JSON cho mỗi cặp giao dịch
+                asset_info = {
+                    'symbol': str(asset),
+                    'quantity': free + locked,
+                    'price': price
+                }
+                
+                # Thêm vào danh sách kết quả
+                result.append(asset_info)
 
-            # Print the amount of BTC, MLN, ETH, USDT
-            if asset in ['BTC', 'MLN', 'ETH', 'USDT'] and total > 0:
-                print(f"{asset}: {total}")
+        # Trả về JSON response
+        return jsonify({"PriceCoin":result}), 200
 
-        return jsonify(account_info), 200
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
     
@@ -310,6 +345,158 @@ def send_market():
         return jsonify(order)
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+    
+@app.route('/get_hourly_data', methods=['POST'])
+def get_hourly_data():
+    # Lấy dữ liệu từ request
+    data = request.form
+    print(data)
+    current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    # Convert end date to timestamp
+    end_timestamp = pd.to_datetime(current_date).timestamp() * 1000
+
+    # Initialize an empty DataFrame to store the data
+    df = pd.DataFrame()
+
+    # Define the interval for each request (1 month)
+    interval = timedelta(days=2)
+
+    # Make requests in chunks
+    current_start = end_timestamp - interval.total_seconds() * 1000
+    while current_start < end_timestamp:
+        current_end = min(current_start + interval.total_seconds() * 1000, end_timestamp)
+
+        # Get data from the Binance API
+        klines = client.get_klines(symbol=data['symbol'], interval=Client.KLINE_INTERVAL_1HOUR, startTime=int(current_start), endTime=int(current_end))
+
+        # Convert data to DataFrame and append to the main df
+        temp_df = pd.DataFrame(klines, columns=['ThoiGian', 'Open', 'High', 'Low', 'Close', 'Volume', 'CloseTime', 'QuoteAssetVolume', 'NumberOfTrades', 'TakerBuyBaseAssetVolume', 'TakerBuyQuoteAssetVolume', 'Ignore'])
+        df = pd.concat([df, temp_df], ignore_index=True)
+
+        # Move to the next interval
+        current_start = current_end
+
+    # Select the columns to use
+    df = df[['ThoiGian', 'Open', 'High', 'Low', 'Close', 'Volume']]
+
+    # Convert data types
+    df['ThoiGian'] = pd.to_datetime(df['ThoiGian'], unit='ms')
+    df['Open'] = df['Open'].astype(float)
+    df['High'] = df['High'].astype(float)
+    df['Low'] = df['Low'].astype(float)
+    df['Close'] = df['Close'].astype(float)
+    df['Volume'] = df['Volume'].astype(float)
+
+    # Chuyển DataFrame thành JSON và trả về
+    json_data = df.to_json(orient='records', date_format='iso')
+    return jsonify(json_data)
+
+@app.route('/order_book', methods=['POST'])
+def order_book():
+    # Lấy order book cho một cặp giao dịch cụ thể (ví dụ: BTCUSDT)
+    data = request.form
+    print(data)
+    symbol = 'BTCUSDT'
+    order_book = client.get_order_book(symbol=symbol)
+
+    # Chuẩn bị dữ liệu để xuất dưới dạng JSON
+    order_book_json = {
+        'bids': order_book['bids'][:5],
+        'asks': order_book['asks'][:5]
+    }
+
+    return jsonify(order_book_json)
+
+def getHourlyData(symbol, num_hours=200):
+    # Calculate the number of data points needed for the last num_hours
+    num_points = num_hours
+
+    frame = pd.DataFrame(client.get_historical_klines(symbol, '1h', num_points))
+
+    frame = frame[[0, 4, 7]]
+    frame.columns = ['ThoiGian', 'GiaDong', 'KhoiLuong']
+
+    frame['GiaDong'] = frame['GiaDong'].astype(float)
+    frame['KhoiLuong'] = frame['KhoiLuong'].astype(float)
+
+    frame['ThoiGian'] = pd.to_datetime(frame['ThoiGian'], unit='ms')
+    return frame
+
+#ok
+def SMA(df):
+    df['SMA7(7h)'] = df['GiaDong'].rolling(7).mean()
+    df['SMA25(25h)'] = df['GiaDong'].rolling(25).mean()
+    df['SMA99(99h)'] = df['GiaDong'].rolling(99).mean()
+
+#ok 
+def EMA(df):
+    df['EMA7'] = df['GiaDong'].ewm(span=7, adjust=False).mean()
+    df['EMA25'] = df['GiaDong'].ewm(span=25, adjust=False).mean()
+    df['EMA99'] = df['GiaDong'].ewm(span=99, adjust=False).mean()
+
+
+#ok
+def strategy(data):
+    current_price = get_current_price()
+    Buy_Signal = (current_price > data['SMA7(7h)']) & (current_price > data['SMA25(25h)']) & (current_price > data['SMA99(99h)']) (current_price > data['EMA7(7h)']) & (current_price > data['EMA25(25h)']) & (current_price > data['EMA99(99h)'])
+    Sell_Signal = (current_price < data['SMA25(25h)']) | (current_price < data['SMA99(99h)']) & (current_price < data['EMA25(25h)']) | (current_price < data['EMA99(99h)'])
+    if Buy_Signal: return True
+    if Sell_Signal: return False
+    return None
+#ok
+def log_transaction(action, symbol, quantity, price, file_path='note.txt'):
+    # Mở file ở chế độ append ('a')
+    with open(file_path, 'a') as file:
+        # Ghi thông tin giao dịch vào file
+        file.write(f"{action} - Symbol: {symbol}, Quantity: {quantity}, Price: {price}\n")
+
+#Ok        
+def create_note_file(file_path='note.txt'):
+    # Mở file ở chế độ ghi ('w'), nếu file chưa tồn tại sẽ tạo mới, nếu đã tồn tại sẽ bị ghi đè
+    with open(file_path, 'w') as file:
+        file.write("My Trading Notes\n")  # Ghi một dòng tiêu đề vào file
+        file.write("================\n")  # Ghi một dòng phân đoạn
+
+#ok        
+def get_account_balance(symbol='BTC'):
+    # Lấy thông tin tài khoản
+    account_info = client.get_account()
+
+    # Duyệt qua các tài khoản và lấy số dư của đồng coin cụ thể
+    for balance in account_info['balances']:
+        if balance['asset'] == symbol:
+            return float(balance['free'])
+
+    # Trả về 0 nếu không tìm thấy số dư cho đồng coin cụ thể
+    return 0.0
+
+@app.route('/trading_data', methods=['POST'])
+def process_trading_data():
+    # Get the data sent in the POST request
+    request_data = request.form
+    print(request_data)
+    # Extract relevant parameters from the request_data
+    symbol = request_data.get('symbol', 'BTCUSDT')
+    num_hours = 200
+
+    # Fetch trading data using the provided parameters
+    dataLive = getHourlyData(symbol, num_hours=num_hours)
+    EMA(dataLive)
+    SMA(dataLive)
+    
+    if (strategy(dataLive) == True) and (get_account_balance(symbol='USDT') != 0):
+        place_buy_order(symbol, get_account_balance(symbol='BTC'), get_current_price())
+        log_transaction('BUY', symbol, get_account_balance(symbol='BTC'), get_current_price(), file_path='Dữ liệu giao dịch.txt')
+    elif (strategy(dataLive) == False) and (get_account_balance(symbol='BTCUSDT') != 0):
+        place_sell_order(symbol, get_account_balance(symbol='BTC'), get_current_price())
+        log_transaction('SELL', symbol, get_account_balance(symbol='BTC'), get_current_price(), file_path='Dữ liệu giao dịch.txt')
+    else:
+        log_transaction('HOLD', symbol, 0, get_current_price(), file_path='Dữ liệu giao dịch.txt')
+
+    # Convert the DataFrame to a JSON object
+    json_data = dataLive.to_json(orient='records', date_format='iso')
+
+    return jsonify(json_data)
 
 if __name__ == '__main__':
     app.run(host = "0.0.0.0", debug=True)
