@@ -13,6 +13,8 @@ from scipy.interpolate import lagrange
 from io import BytesIO, StringIO
 import base64
 
+import time
+
 import math
 
 app = Flask(__name__)
@@ -122,7 +124,7 @@ def start_auto_trade():
 
             print(f"Stop loss order placed at {stop_loss_price}")
         else:
-            print("Không thực hiện mua bán trong interval này")
+            return jsonify({'status': 'success', 'order': order, 'message': 'Không thực hiện mua bán trong interval này'})
         return jsonify({'status': 'success', 'order': order, 'message': 'Trade executed successfully'})
 
     except binance.exceptions.BinanceAPIException as e:
@@ -138,6 +140,7 @@ def start_auto_trade():
         return jsonify({"message": "Chu kỳ giao dịch tự động đã bắt đầu"}), 200
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
 
 @app.route('/get_account_info', methods=['GET'])
 def get_account_info():
@@ -393,7 +396,8 @@ def order_book():
     # Lấy order book cho một cặp giao dịch cụ thể (ví dụ: BTCUSDT)
     data = request.form
     print(data)
-    symbol = 'BTCUSDT'
+    symbol = data.get('symbol')
+    symbol = symbol + "USDT"
     order_book = client.get_order_book(symbol=symbol)
 
     # Chuẩn bị dữ liệu để xuất dưới dạng JSON
