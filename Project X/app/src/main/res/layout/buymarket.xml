@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="350dp"
+    android:layout_height="400dp"
+    android:padding="16dp"
+    android:layout_marginTop="0dp"
+
+    android:background="@drawable/welcome">
+
+    <!-- Tiêu đề "BUY MARKET" -->
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="BUY MARKET"
+        android:textSize="20sp"
+        android:textColor="@android:color/white"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Chỗ nhập quantity -->
+    <EditText
+        android:id="@+id/newwEdtQuantity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tvTitle"
+        android:hint="Enter Quantity"
+        android:textColor="@android:color/white"
+        android:textColorHint="@android:color/white"
+        android:layout_marginBottom="16dp"
+        android:minHeight="48dp"/>
+
+    <!-- Chỗ nhập loại cặp giao dịch -->
+    <EditText
+        android:id="@+id/newwEdtTransactionType"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter Transaction Type"
+        android:textColorHint="@android:color/white"
+        android:layout_below="@id/newwEdtQuantity"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"
+        android:minHeight="48dp"/>
+
+    <!-- Nút TRADE -->
+    <Button
+        android:id="@+id/newwBtnTrade"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/newwEdtTransactionType"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:background="@color/colorAccent"
+        android:text="TRADE"
+        android:padding="12dp"/>
+
+    <!-- Nút CLOSE -->
+    <Button
+        android:id="@+id/newwBtnClosePopup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/newwBtnTrade"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginLeft="120dp"
+        android:text="CLOSE" />
+</RelativeLayout>
